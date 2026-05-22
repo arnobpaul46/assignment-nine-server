@@ -20,7 +20,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    
+
     await client.connect();
 
     const db = client.db("docappoint");
@@ -28,13 +28,13 @@ async function run() {
     // all doctors list
     app.get("/all-doctors", async (req, res) => {
       try {
-        
+
         const result = await allDoctorsCollection.findOne({});
 
         if (result && result.doctors) {
-          res.send(result.doctors); 
+          res.send(result.doctors);
         } else {
-          res.send([]); 
+          res.send([]);
         }
       } catch (error) {
         res.status(500).send("Server Error");
@@ -42,7 +42,30 @@ async function run() {
 
     })
 
-    
+    // signle doctors 
+    app.get("/doctor/:name", async (req, res) => {
+      try {
+        const name = req.params.name;
+        const db = client.db("docappoint");
+        const allDoctorsCollection = db.collection('all-doctors');
+        const result = await allDoctorsCollection.findOne({});
+
+        if (result && result.doctors) {
+          
+          const singleDoctor = result.doctors.find(doc => doc.name === name);
+
+          if (singleDoctor) {
+            res.send(singleDoctor);
+          } else {
+            res.status(404).send({ message: "Doctor not found" });
+          }
+        } else {
+          res.status(404).send({ message: "Data not found" });
+        }
+      } catch (error) {
+        res.status(500).send("Internal Server Error");
+      }
+    });
 
 
 
@@ -51,7 +74,7 @@ async function run() {
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
-    
+
   }
 }
 run().catch(console.dir);
