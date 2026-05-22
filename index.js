@@ -43,30 +43,30 @@ async function run() {
     })
 
     // signle doctors 
-    app.get("/doctor/:name", async (req, res) => {
+    app.get("/all-doctors/:id", async (req, res) => {
       try {
-        const name = req.params.name;
+        const doctorId = req.params.id; 
         const db = client.db("docappoint");
         const allDoctorsCollection = db.collection('all-doctors');
+
         const result = await allDoctorsCollection.findOne({});
 
         if (result && result.doctors) {
           
-          const singleDoctor = result.doctors.find(doc => doc.name === name);
+          const singleDoctor = result.doctors.find(doc => doc.id === doctorId);
 
           if (singleDoctor) {
             res.send(singleDoctor);
           } else {
-            res.status(404).send({ message: "Doctor not found" });
+            res.status(404).send({ message: "Doctor not found with ID: " + doctorId });
           }
         } else {
-          res.status(404).send({ message: "Data not found" });
+          res.status(404).send({ message: "Data structure error in DB" });
         }
       } catch (error) {
         res.status(500).send("Internal Server Error");
       }
     });
-
 
 
 
