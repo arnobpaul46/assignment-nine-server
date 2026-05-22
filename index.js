@@ -108,4 +108,9 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => { res.send('Server is running!') });
-app.listen(port, () => { console.log(`Server listening on port ${port}`) });
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server listening on port ${port}`);
+    });
+}
+module.exports = app;
