@@ -2,6 +2,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 dotenv.config();
 const app = express();
@@ -20,7 +21,6 @@ const client = new MongoClient(uri, {
   }
 });
 
-
 let allDoctorsCollection;
 let bookingsCollection;
 
@@ -38,12 +38,30 @@ async function connectDB() {
   }
 }
 
+const verifyToken = (req, res, next) => {
+  if (!req.headers.authorization) {
+    return res.status(401).send({ message: 'unauthorized access' });
+  }
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'unauthorized access' });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
 app.use(async (req, res, next) => {
   await connectDB();
   next();
 });
 
+app.post('/jwt', async (req, res) => {
+  const user = req.body;
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+  res.send({ token });
+});
 
 app.get('/', (req, res) => {
   res.send('Server is running perfectly!');
@@ -57,7 +75,6 @@ app.get("/all-doctors", async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 });
-
 
 app.get("/all-doctors/:id", async (req, res) => {
   try {
@@ -73,8 +90,7 @@ app.get("/all-doctors/:id", async (req, res) => {
   }
 });
 
-
-app.post("/bookings", async (req, res) => {
+app.post("/bookings", verifyToken, async (req, res) => {
   try {
     const booking = req.body;
     const result = await bookingsCollection.insertOne(booking);
@@ -84,10 +100,12 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
-
-app.get("/my-appointments", async (req, res) => {
+app.get("/my-appointments", verifyToken, async (req, res) => {
   try {
     const email = req.query.email;
+    if (email !== req.decoded.email) {
+      return res.status(403).send({ message: 'forbidden access' });
+    }
     const result = await bookingsCollection.find({ userEmail: email }).toArray();
     res.json(result);
   } catch (error) {
@@ -95,8 +113,7 @@ app.get("/my-appointments", async (req, res) => {
   }
 });
 
-
-app.delete("/bookings/:id", async (req, res) => {
+app.delete("/bookings/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
     const result = await bookingsCollection.deleteOne({ _id: new ObjectId(id) });
@@ -106,8 +123,7 @@ app.delete("/bookings/:id", async (req, res) => {
   }
 });
 
-
-app.patch("/bookings/:id", async (req, res) => {
+app.patch("/bookings/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
     const updatedData = req.body;
@@ -121,12 +137,10 @@ app.patch("/bookings/:id", async (req, res) => {
   }
 });
 
-
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
   });
 }
-
 
 module.exports = app;
